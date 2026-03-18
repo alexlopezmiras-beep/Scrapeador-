@@ -1,0 +1,305 @@
+# 🏠 Idealista Scraper — Detector de Particulares Elche & Alicante
+
+Sistema profesional de scraping inmobiliario para detectar **oportunidades de particulares** en Idealista antes que la competencia.
+
+-----
+
+## ✨ Funcionalidades
+
+|Feature                        |Descripción                                      |
+|-------------------------------|-------------------------------------------------|
+|🔍 **Multizona**                |Elche, Alicante, barrios específicos (ampliable) |
+|🧍 **Detección de particulares**|Score 0–1 con reglas + heurísticas de lenguaje   |
+|💶 **Detector de gangas**       |Compara €/m² con media de mercado por zona       |
+|⭐ **Priorización**             |Alta/Media/Baja según novedad, score y precio    |
+|📉 **Histórico de precios**     |Detecta bajadas de precio en anuncios existentes |
+|📢 **Notificaciones**           |Telegram y/o email solo para leads alta prioridad|
+|💾 **Output**                   |CSV + JSON listos para CRM / análisis            |
+|🤖 **Automatización**           |GitHub Actions (2x/día) + compatible con cron    |
+|🛡️ **Anti-bloqueo**             |Rotación UA, delays aleatorios, reintentos       |
+
+-----
+
+## 📁 Estructura del Proyecto
+
+```
+idealista_scraper/
+├── scraper.py          # Motor principal de scraping
+├── filters.py          # Scoring de particulares y clasificación
+├── utils.py            # HTTP, parseo, notificaciones, persistencia
+├── config.py           # Configuración central
+├── requirements.txt    # Dependencias Python
+├── .env.example        # Plantilla de variables de entorno
+├── .github/
+│   └── workflows/
+│       └── scraper.yml # GitHub Actions (ejecución automática)
+└── output/             # Generado automáticamente
+    ├── leads.csv       # Todos los leads acumulados
+    ├── leads.json      # Leads en JSON
+    ├── history.json    # Histórico de precios por anuncio
+    └── seen_ids.json   # IDs procesados (deduplicación)
+```
+
+-----
+
+## 🚀 Instalación y Uso Local
+
+### 1. Requisitos
+
+- Python 3.9+
+- pip
+
+### 2. Clonar e instalar
+
+```bash
+git clone https://github.com/tu-usuario/idealista-scraper.git
+cd idealista-scraper
+pip install -r requirements.txt
+```
+
+### 3. Configurar variables de entorno
+
+```bash
+cp .env.example .env
+# Edita .env con tu editor favorito
+nano .env
+```
+
+Variables esenciales en `.env`:
+
+```env
+TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+TELEGRAM_CHAT_ID=987654321
+NOTIFICATION_CHANNEL=telegram  # telegram | email | both | none
+```
+
+### 4. Ejecutar
+
+```bash
+python scraper.py
+```
+
+O con número de páginas personalizado:
+
+```bash
+python -c "import scraper; scraper.run(max_pages_per_zone=5)"
+```
+
+-----
+
+## ⚙️ Configuración
+
+Edita `config.py` para personalizar:
+
+### Añadir zonas de búsqueda
+
+```python
+SEARCH_URLS = [
+    "https://www.idealista.com/venta-viviendas/elche-alicante/?ordenado-por=fecha-publicacion-desc",
+    "https://www.idealista.com/venta-viviendas/alicante-alicante/?ordenado-por=fecha-publicacion-desc",
+    # Añade más URLs aquí ↓
+    "https://www.idealista.com/venta-viviendas/benidorm-alicante/",
+    "https://www.idealista.com/venta-viviendas/torrevieja-alicante/",
+]
+```
+
+### Precios de mercado por zona
+
+```python
+MARKET_PRICES = {
+    "elche":     1_350,   # €/m² estimado
+    "alicante":  1_900,
+    # Añade tu zona ↓
+    "benidorm":  2_500,
+}
+```
+
+### Umbrales de prioridad
+
+```python
+PRIORITY_MAX_HOURS    = 48    # anuncios de menos de X horas = "nuevo"
+SCORE_PARTICULAR_HIGH = 0.7   # score mínimo para "alta prioridad"
+OPPORTUNITY_HIGH      = 0.20  # 20% bajo mercado = "alta oportunidad"
+```
+
+-----
+
+## 📊 Formato de Salida
+
+### CSV (`output/leads.csv`)
+
+|Campo              |Tipo    |Descripción                     |
+|-------------------|--------|--------------------------------|
+|`fecha_scraping`   |datetime|Cuándo se procesó               |
+|`id_anuncio`       |str     |ID único de Idealista           |
+|`titulo`           |str     |Título del anuncio              |
+|`precio`           |float   |Precio en €                     |
+|`m2`               |float   |Metros cuadrados                |
+|`euro_m2`          |float   |Precio por m²                   |
+|`ubicacion`        |str     |Barrio/zona                     |
+|`nombre_anunciante`|str     |Nombre del anunciante           |
+|`tipo_anunciante`  |str     |Tipo (particular/agencia)       |
+|`telefono`         |str     |Teléfono si está visible        |
+|`url`              |str     |Enlace al anuncio               |
+|`score_particular` |float   |0.0 (agencia) → 1.0 (particular)|
+|`oportunidad`      |str     |alta / media / baja / sin datos |
+|`prioridad`        |str     |alta / media / baja             |
+|`horas_publicacion`|int     |Horas desde publicación         |
+|`bajada_precio`    |bool    |True si bajó el precio          |
+|`precio_anterior`  |float   |Precio antes de la bajada       |
+|`bajada_diferencia`|float   |Cuánto bajó en €                |
+
+-----
+
+## 🔔 Configurar Notificaciones
+
+### Telegram
+
+1. Abre Telegram y busca **@BotFather**
+1. Envía `/newbot` y sigue las instrucciones
+1. Copia el token en `.env`:
+   
+   ```
+   TELEGRAM_BOT_TOKEN=123456789:AAF...
+   ```
+1. Envía un mensaje a tu bot, luego visita:
+   
+   ```
+   https://api.telegram.org/bot<TU_TOKEN>/getUpdates
+   ```
+1. Copia el `chat.id` en:
+   
+   ```
+   TELEGRAM_CHAT_ID=123456789
+   ```
+
+### Email (Gmail)
+
+1. Ve a [Seguridad de Google](https://myaccount.google.com/security)
+1. Activa verificación en 2 pasos
+1. Busca “Contraseñas de aplicación” → genera una
+1. Configura en `.env`:
+   
+   ```
+   EMAIL_USER=tu@gmail.com
+   EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
+   EMAIL_RECIPIENT=destino@email.com
+   ```
+
+-----
+
+## 🤖 Automatización con GitHub Actions
+
+### Configuración
+
+1. Sube el proyecto a un repositorio privado de GitHub
+1. Ve a **Settings → Secrets and variables → Actions** y añade:
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+- `NOTIFICATION_CHANNEL`
+1. El scraper se ejecuta automáticamente a las **08:00 y 18:00 UTC** todos los días
+1. También puedes lanzarlo manualmente desde la pestaña **Actions**
+
+### Ejecución manual con cron (local)
+
+```bash
+# Editar crontab
+crontab -e
+
+# Añadir (ejecuta a las 8h y 18h)
+0 8,18 * * * cd /ruta/al/proyecto && python scraper.py >> logs/cron.log 2>&1
+```
+
+-----
+
+## 🧠 Sistema de Scoring de Particulares
+
+El `score_particular` (0.0–1.0) combina:
+
+### Reglas duras
+
+- **Agencia detectada** → score = 0.05 (descarta el lead)
+  - Palabras: “inmobiliaria”, “real estate”, “S.L.”, “grupo”, etc.
+- **Particular explícito** → +0.35
+  - Palabras: “particular”, “sin intermediarios”, “vendo mi piso”, etc.
+- **Nombre de persona** → +0.20
+  - Nombre de 1-3 palabras coincidente con nombres españoles comunes
+
+### Heurísticas de lenguaje
+
+- **Lenguaje emocional** → hasta +0.15
+  - “encantador”, “luminoso”, “nuestra casa”, “hemos reformado”…
+- **Primera persona** → hasta +0.10
+  - “vendo”, “nos mudamos”, “he vivido”…
+- **Teléfono en descripción** → +0.10 (particulares lo ponen a veces)
+- **Longitud de descripción** → hasta +0.05
+- **Lenguaje comercial** → hasta -0.25 (penalización)
+  - “rentabilidad”, “ROI”, “gestión integral”, “exclusiva”…
+
+### Interpretación
+
+|Score    |Clasificación                      |
+|---------|-----------------------------------|
+|0.0 – 0.3|Muy probable agencia               |
+|0.3 – 0.5|Indeterminado                      |
+|0.5 – 0.7|Probable particular                |
+|0.7 – 1.0|Muy probable particular → priorizar|
+
+-----
+
+## ⚠️ Notas Legales y Éticas
+
+- **Delays configurados**: 8–20 segundos entre peticiones (no sobrecarga el servidor)
+- **Uso responsable**: diseñado para uso personal/profesional limitado
+- **Robots.txt**: verifica las condiciones de uso de Idealista antes de escalar
+- **Datos personales**: tratar teléfonos y nombres según RGPD
+- El scraping puede infringir los ToS de Idealista si se usa comercialmente a gran escala
+
+-----
+
+## 🔧 Extensión a Otros Portales
+
+Para añadir Fotocasa, Habitaclia, etc.:
+
+1. Crea `scrapers/fotocasa.py` con la misma interfaz que `IdealistaScraper`
+1. Implementa `parse_listing_page()` y `enrich_from_detail()`
+1. Añade las URLs en `config.py`
+1. El pipeline de `filters.py` y `utils.py` funciona sin cambios
+
+-----
+
+## 🐛 Solución de Problemas
+
+|Error               |Causa probable            |Solución                          |
+|--------------------|--------------------------|----------------------------------|
+|HTTP 403            |IP bloqueada temporalmente|Esperar 1h, usar proxy            |
+|HTTP 429            |Rate limit                |Aumentar `DELAY_MIN` y `DELAY_MAX`|
+|0 anuncios extraídos|Idealista cambió el HTML  |Revisar selectores en `scraper.py`|
+|Telegram no funciona|Token o chat_id incorrecto|Verificar con `/getUpdates`       |
+
+### Modo debug
+
+```bash
+python -c "
+import logging
+logging.getLogger('idealista_scraper').setLevel(logging.DEBUG)
+import scraper
+scraper.run(max_pages_per_zone=1)
+"
+```
+
+-----
+
+## 📈 Roadmap / Mejoras Futuras
+
+- [ ] Integración con Playwright para JS-heavy pages
+- [ ] Dashboard web (Streamlit) para visualizar leads
+- [ ] Exportación a Google Sheets
+- [ ] Integración con CRM (HubSpot, Pipedrive)
+- [ ] Añadir Fotocasa y Habitaclia
+- [ ] Alertas de subidas de precio (para seguimiento de negociación)
+- [ ] API REST para consultar leads desde otras herramientas
+
+-----
+
+*Desarrollado con Python 3.11 | Uso responsable y ético*
