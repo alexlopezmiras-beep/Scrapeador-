@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────
+
+# Idealista Scraper — Dependencias
+
+# ─────────────────────────────────────────────
+
+# HTTP y sesiones
+
+requests>=2.31.0
+
+# Parseo HTML
+
+beautifulsoup4>=4.12.0
+lxml>=5.1.0
+
+# Variables de entorno
+
+python-dotenv>=1.0.0
+
+# Utilidades (incluidas en stdlib Python 3.8+, listadas por claridad)
+
+# json, csv, re, time, datetime, logging, smtplib — stdlib
+
+# ── OPCIONAL: Scraping JS-heavy con Playwright ──────────────────────
+
+# Descomenta si Idealista bloquea el scraper estático:
+
+# playwright>=1.43.0
+
+# Tras instalar: playwright install chromium
+
+# ── OPCIONAL: Proxy / anonimización ─────────────────────────────────
+
+# requests[socks]>=2.31.0     # Para proxies SOCKS5
+
+# ── OPCIONAL: Análisis / exportación extra ───────────────────────────
+
+# pandas>=2.2.0               # Para análisis avanzado del CSV
+
+# openpyxl>=3.1.0             # Para exportar a Excel
